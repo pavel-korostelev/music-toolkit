@@ -1,0 +1,28 @@
+{
+  "genre_rules": [
+    {
+      "genres": ["Rock", "Rock in Russian", "Hard Rock", "Metal", "Heavy Metal", "Punk", "Pop Punk", "Alternative", "Alternative Rock", "Indie Rock", "Indie Pop", "Folk-Rock", "Singer/Songwriter", "Christian"],
+      "playlists": ["Рок и инди"]
+    },
+    {
+      "genres": ["Electronic", "Electronica", "Dance", "House", "Deep House", "Techno", "Downtempo", "Jungle/Drum'n'bass", "Drum & Bass", "Garage", "Dubstep", "Bass", "Breakbeat", "Baile Funk", "Trance", "Ambient"],
+      "playlists": ["Электроника"]
+    },
+    {
+      "genres": ["Pop", "Pop in Russian", "French Pop", "R&B/Soul", "R&B", "Soul", "Funk", "Blues", "Disco", "Reggae", "Samba"],
+      "playlists": ["Поп и соул"]
+    },
+    {"genres": ["K-Pop"], "playlists": ["K-pop"]},
+    {"genres": ["Jazz", "Smooth Jazz"], "playlists": ["Джаз"]},
+    {"genres": ["Classical", "Opera", "Orchestral"], "playlists": ["Классика"]},
+    {"genres": ["Country", "Folk", "Contemporary Folk", "Traditional Folk"], "playlists": ["Кантри и фолк"]},
+    {"genres": ["Soundtrack", "Original Score", "Musicals"], "playlists": ["Саундтреки"]}
+  ],
+  "russian_rap_artists": ["MORGENSHTERN", "Oxxxymiron", "ATL", "GUF", "Гуф", "SALUKI", "Miyagi", "Эндшпиль", "Andy Panda", "Noize MC", "Thomas Mraz", "T-Fest", "SLAVA MARLOW", "Rakhim", "Murovei", "IROH", "GONE.Fludd", "HOMIE", "Gruppa Skryptonite", "Скриптонит", "CYGO", "Brick Bazuka", "Big Russian Boss", "Young P&H", "AK-47", "Aarne", "Toxi$", "Big Baby Tape", "Kempel", "Markul", "Feduk", "CENTR", "LSP", "ЛСП", "Макс Корж", "Max Korzh", "KREC"],
+  "rap_playlists": {"russian": "Русский рэп", "other": "Зарубежный хип-хоп"},
+  "artist_rules": [
+    {"artists": ["MORGENSHTERN", "Oxxxymiron", "ATL", "GUF", "Гуф", "Noize MC", "SALUKI", "Miyagi", "Скриптонит", "Gruppa Skryptonite", "Грибы"], "playlists": ["Русский рэп"]}
+  ],
+  "track_rules": [],
+  "unmatched_playlist": "Разобрать"
+}

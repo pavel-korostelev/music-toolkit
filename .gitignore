@@ -1,0 +1,10 @@
+data/
+.venv/
+__pycache__/
+*.pyc
+*.lock
+.DS_Store
+*.log
+dist/
+*.zip
+.pytest_cache/
