@@ -9,7 +9,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 ROOT_FILES={'agent.py','music_tool.py','rules.json','requirements.txt','Start.command','Install.command',
-            '.gitignore','README.md','AGENTS.md','CLAUDE.md','README.txt','VALIDATION.txt','POST.txt','LICENSE'}
+            '.gitignore','README.md','AGENTS.md','CLAUDE.md','README.txt','VALIDATION.txt','LICENSE'}
 SOURCE_DIRS={'engine','scripts','tests','docs','.github'}
 PRIVATE_PARTS={'data','.venv','.git','__pycache__','dist','exports','work','private','.pytest_cache'}
 
