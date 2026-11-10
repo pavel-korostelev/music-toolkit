@@ -58,3 +58,47 @@ The tool adds songs and creates named destinations as needed. It does not remove
 Run `python3 -B -m unittest discover -s tests -v`. Native matcher tests use the production AppleScript matching function without touching Music; they skip on non-macOS. Never run a live import/apply merely to test code unless that account mutation is specifically authorized. A real read/dry-run is useful when available; keep its artifacts under `data/` or outside the checkout.
 
 `python3 scripts/build_archive.py` packages tracked source files and rejects personal paths, credential-like files, data directories, and logs. Test an unpacked archive as well as the checkout. README.md and this file must be in the archive root folder. Keep code version, human guide and validation notes consistent. See README.txt for CLI/rule details and VALIDATION.txt for validation limits.
+
+
+## Experimental Spotify workflow (0.3.0-dev)
+
+Read docs/SPOTIFY.md before Spotify work. Existing Yandex export/setup/transfer,
+old export fingerprints/progress and sorting must remain usable without SpotAPI.
+Do not import SpotAPI or Playwright from core commands. Spotify dependencies and
+Chromium belong only in .venv-spotify; setup-spotify selects Python 3.10–3.13.
+Use setup-spotify --check, then setup-spotify (optional --python path).
+
+Start real validation with export-spotify (a small sample), leave its process
+running while the user logs into the dedicated browser. Never request passwords,
+cookies or tokens in chat, command arguments or source. Do not enable debug logs,
+traces, storage_state, session savers or third-party CAPTCHA solvers. Session
+cookies stay in memory. Development validation defaults to local tests only; do not initiate an account
+login merely to validate a code change without a user request.
+
+After the user requests actual operation and the sample is inspected, use
+export-spotify --full. A sample always exits 2 and is not a full export. Inspect
+complete, errors, every collection/library counter and skipped items. Full success
+requires complete=true and mode=full; never infer success from file existence.
+Unknown response shapes, missing totals, repeated pages and source count changes
+require review. Partial results persist; a new export never overwrites old ones.
+
+Use transfer-spotify --export /absolute/path/spotify_library.json for preview.
+Only after account mutation is authorized use --apply --limit 5, inspect results,
+then continue an already authorized full transfer without another approval.
+Do not change the AppleScript matcher or weaken duration/version checks.
+Default destination is Spotify. Preserve --data-dir, export and --playlist.
+Status: status-spotify --export ... . State lives under data/spotify/<account hash>,
+with namespaced Spotify IDs; do not invent yandex_id values or migrate old state.
+Do not run Spotify and Yandex imports or sorting concurrently. Report source rows,
+unique verified Apple IDs, actual destination size, review and skips separately.
+
+The combined project in this branch is GPL-3.0-only (LICENSE), as authorized
+by the owner. Preserve LICENSE-MIT and NOTICE, including original copyright
+notices. A separate process/venv is not a GPL exemption. Keep the pinned upstream
+source reference when distributing the integration. Do not change licensing
+silently in subsequent work.
+Never commit/upload exports, sessions, environments, logs or listener data.
+
+Run the full local suite on Python 3.9 without optional dependencies, and in the
+Spotify environment. Test the built and unpacked source archive. Record account
+checks separately; do not call unit tests a real Spotify/Music transfer test.

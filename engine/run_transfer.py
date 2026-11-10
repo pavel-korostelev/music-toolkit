@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run the transfer with a heartbeat, bounded recovery, and readable status."""
 import collections
+import argparse
 import datetime
 import json
 import os
@@ -74,6 +75,16 @@ def completed_count():
                for x in progress.get('tracks',{}).values())
 
 
+def batch_arguments(arguments, completed):
+    parser=argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--limit',type=int,default=0)
+    options,rest=parser.parse_known_args(arguments)
+    if options.limit and completed>=options.limit:
+        return None
+    remaining=max(0,options.limit-completed) if options.limit else 0
+    return rest+['--limit',str(remaining)]
+
+
 def main():
     # Advisory lock prevents a second runner from writing to the same playlist.
     import fcntl
@@ -86,14 +97,19 @@ def main():
     child=None
     attempt=0
     failures=0
+    batch_start=completed_count()
     try:
         while failures<3:
             attempt+=1
             completed_before=completed_count()
+            arguments=batch_arguments(sys.argv[1:],completed_before-batch_start)
+            if arguments is None:
+                publish('Завершено — достигнут лимит тестовой порции',None,attempt)
+                return
             (HERE/'current-step.json').write_text(json.dumps({'step':'Запуск обработки','since':time.time()},ensure_ascii=False))
             with open(HERE/'transfer.log','a',buffering=1) as log:
                 log.write(f'\nRUN {attempt}: {datetime.datetime.now().isoformat()}\n')
-                child=subprocess.Popen([sys.executable,'-u',str(CODE_DIR/'catalog_transfer.py'),*sys.argv[1:]],
+                child=subprocess.Popen([sys.executable,'-u',str(CODE_DIR/'catalog_transfer.py'),*arguments],
                                        stdout=log,stderr=log,start_new_session=True)
                 while child.poll() is None:
                     status=publish('Работает',child.pid,attempt)

@@ -5,6 +5,10 @@ Does not download audio, use account tokens, or change existing tracks.
 Only verified matches already present in the library are copied.
 """
 import argparse
+try:
+    from .sources import records
+except ImportError:
+    from sources import records
 import json
 import re
 import subprocess
@@ -98,14 +102,14 @@ def main():
     args = parser.parse_args()
     export = json.loads(args.export.read_text())
     # First occurrence preserves the source order.
-    unique = {}
-    for playlist in export['playlists']:
-        for track in playlist['tracks']:
-            unique.setdefault(track['yandex_id'], track)
+    unique = records(export)
     library = read_library()
     report = {'source_count':len(unique), 'playlist':args.playlist, 'applied':args.apply, 'tracks':[]}
     copied_ids = set()
     for track in unique.values():
+        if track.get('review_reasons'):
+            report['tracks'].append({'source':track,'status':'review','reasons':track['review_reasons']})
+            continue
         candidates = [c for c in library if matches(track, c)]
         preferred = [c for c in candidates if norm(c['album']) in [norm(a) for a in track['albums']]]
         candidates = preferred or candidates

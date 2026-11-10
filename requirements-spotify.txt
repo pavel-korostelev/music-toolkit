@@ -1,0 +1,25 @@
+# Optional Spotify environment; resolved for Python 3.10 on macOS.
+# SpotAPI source audited at the exact commit below.
+beautifulsoup4==4.15.0
+certifi==2026.10.23
+cffi==2.1.1
+charset-normalizer==3.5.2
+colorama==0.4.6
+curl-cffi==0.17.0
+greenlet==3.5.6
+idna==3.20
+pillow==12.3.0
+playwright==1.55.0
+pycparser==3.11
+pyee==13.0.1
+pyotp==2.10.0
+readerwriterlock==1.0.10
+requests==2.34.2
+soupsieve==2.10
+spotapi @ git+https://github.com/Aran404/SpotAPI.git@cb862571574e1ddbf5f8975f58a4f61a0e3d2050
+typing-extensions==4.16.0
+urllib3==2.8.0
+validators==0.35.0
+setuptools==80.9.0
+wheel==0.45.1
+websockets==15.0.1

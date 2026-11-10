@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MusicToolkit: export Yandex metadata, transfer and organize macOS Music."""
 import argparse
+from engine.sources import identity as source_identity, source_name, transfer_directory, require_complete_spotify
 import datetime as dt
 import hashlib
 import importlib.util
@@ -16,7 +17,7 @@ import time
 import unicodedata
 
 ROOT=Path(__file__).resolve().parent
-VERSION='0.2.0'
+VERSION='0.3.0-dev'
 
 def norm(value):
     value=unicodedata.normalize('NFKC',value or '').casefold().replace('ё','е')
@@ -272,16 +273,8 @@ def verify_applied(plan,before,after,result):
     return result
 
 def transfer_identity(export,playlist):
-    raw=Path(export).read_bytes()
-    source=json.loads(raw)
-    if not isinstance(source.get('playlists'),list):raise ValueError('Нужен полный yandex_library.json, не sample_10.json.')
-    unique={}
-    for p in source['playlists']:
-        for t in p['tracks']:
-            for field in ('yandex_id','title','artists','albums','duration_ms'):
-                if field not in t:raise ValueError('Неподдерживаемая структура экспорта: отсутствует '+field)
-            unique.setdefault(str(t['yandex_id']),t)
-    return {'sha256':hashlib.sha256(raw).hexdigest(),'playlist':playlist,'source_count':len(unique)}
+    return source_identity(export,playlist)
+
 
 def run_engine(name,arguments,data_dir):
     env=dict(os.environ,MUSIC_TOOL_STATE_DIR=str(data_dir/'transfer'),PYTHONDONTWRITEBYTECODE='1')
@@ -382,6 +375,10 @@ def main(argv=None):
     elif args.command=='transfer':
         export=args.export.expanduser().resolve()
         identity=transfer_identity(export,args.playlist)
+        source=load(export)
+        if source_name(source)=='spotify' and args.apply:
+            require_complete_spotify(source)
+        data_dir=transfer_directory(data_dir,source)
         if args.limit<0:raise ValueError('--limit должен быть >= 0.')
         if args.playlist in ('Музыка','Music','Любимые песни','Favorite Songs','Сейчас нравится') or not args.playlist.strip():raise ValueError('Выбери отдельный пользовательский плейлист для переноса.')
         if not args.apply:

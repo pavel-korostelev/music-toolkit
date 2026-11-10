@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 from transfer import base_title, artist_match, matches, norm, read_library, copy_track
 from ui_labels import menu_labels
+from sources import records
 
 CODE_DIR = Path(__file__).resolve().parent
 HERE = Path(os.environ.get('MUSIC_TOOL_STATE_DIR', str(CODE_DIR.parent / 'data/transfer')))
@@ -123,10 +124,7 @@ def main():
     p.add_argument('--expanded-search',action='store_true',help='Try shorter queries and verified metadata spelling variants')
     args=p.parse_args()
     source=json.loads(args.export.read_text())
-    tracks={}
-    for playlist in source['playlists']:
-        for t in playlist['tracks']:
-            tracks.setdefault(t['yandex_id'], t)
+    tracks=records(source)
     HERE.mkdir(parents=True,exist_ok=True)
     args.state.parent.mkdir(parents=True,exist_ok=True)
     state=json.loads(args.state.read_text()) if args.state.exists() else {}
@@ -163,8 +161,8 @@ def main():
         save()
         print(f"[{processed}] {' & '.join(t['artists'])} — {t['title']}",flush=True)
         try:
-            if not t.get('artists') or not t.get('title') or t.get('duration_ms') is None:
-                entry.update(status='review',reason='Missing artist, title or duration')
+            if t.get('review_reasons') or not t.get('artists') or not t.get('title') or t.get('duration_ms') is None:
+                entry.update(status='review',reason='Source requires review or is missing artist, title or duration')
                 save()
                 continue
             wanted=search_source(t,args.expanded_search)

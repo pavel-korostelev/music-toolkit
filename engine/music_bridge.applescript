@@ -21,16 +21,28 @@ on mainWindow()
 end mainWindow
 
 on navigationItems(w)
-    tell application "System Events" to tell process "Music"
+    set nav to my findToolbar(w, 5)
+    if nav is missing value then return {}
+    tell application "System Events" to return entire contents of nav
+end navigationItems
+
+on findToolbar(rootEl, remainingDepth)
+    set r to my safeRole(rootEl)
+    if r is "AXToolbar" then return rootEl
+    if remainingDepth is 0 or r is in {"AXTable", "AXOutline", "AXScrollArea"} then return missing value
+    tell application "System Events"
         try
-            set nav to toolbar 1 of w
-            return entire contents of nav
+            set childItems to UI elements of rootEl
         on error
-            set nav to toolbar 1 of group 1 of w
-            return entire contents of nav
+            return missing value
         end try
     end tell
-end navigationItems
+    repeat with childEl in childItems
+        set foundToolbar to my findToolbar(childEl, remainingDepth - 1)
+        if foundToolbar is not missing value then return foundToolbar
+    end repeat
+    return missing value
+end findToolbar
 
 on albumTable(w)
     tell application "System Events" to tell process "Music"
@@ -158,26 +170,31 @@ on run argv
             set selected of row 1 of outline 1 of scroll area 1 of splitter group 1 of w to true
         end tell
         delay 2
-        set w to my mainWindow()
-        tell application "System Events" to tell process "Music"
-            set itemsList to my navigationItems(w)
-            repeat with el in itemsList
-                if my safeRole(el) is "AXTextField" then
-                    set ident to ""
-                    try
-                        set ident to value of attribute "AXIdentifier" of el as text
-                    end try
-                    try
-                        if ident is not "filterField" then
-                            set value of el to queryText
-                            set focused of el to true
-                            key code 36
-                            return "search submitted"
+        repeat 20 times
+            try
+                set w to my mainWindow()
+                tell application "System Events" to tell process "Music"
+                    set itemsList to my navigationItems(w)
+                    repeat with el in itemsList
+                        if my safeRole(el) is "AXTextField" then
+                            set ident to ""
+                            try
+                                set ident to value of attribute "AXIdentifier" of el as text
+                            end try
+                            try
+                                if ident is not "filterField" then
+                                    set value of el to queryText
+                                    set focused of el to true
+                                    key code 36
+                                    return "search submitted"
+                                end if
+                            end try
                         end if
-                    end try
-                end if
-            end repeat
-        end tell
+                    end repeat
+                end tell
+            end try
+            delay 0.5
+        end repeat
         error "Catalog search field was not found"
     else if taskName is "candidates" then
         set outText to ""

@@ -1,0 +1,16 @@
+MusicToolkit — development branch with Spotify integration
+
+The combined project in this branch is distributed under GNU GPL version 3
+(SPDX-License-Identifier: GPL-3.0-only); see LICENSE.
+The original MusicToolkit code was distributed under MIT. Its copyright and
+permission notice are retained in LICENSE-MIT. This does not revoke the MIT
+permissions for that original code.
+
+SpotAPI by Aran is an optional GPL-3.0 dependency, pinned to upstream commit
+cb862571574e1ddbf5f8975f58a4f61a0e3d2050:
+https://github.com/Aran404/SpotAPI
+SpotAPI source is not vendored in this repository or its source archive.
+requirements-spotify.txt identifies its source and pinned dependencies.
+Dependencies retain their own licenses. Distributors of combined binaries or
+bundled dependencies must provide the corresponding source and notices required
+by those licenses; this repository's source ZIP contains no dependency binaries.

@@ -2,27 +2,43 @@
 """Create a source-only archive from a Git checkout or a downloaded source ZIP."""
 import argparse
 import ast
+import json
 from pathlib import Path
 import re
 import subprocess
 import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
-ROOT_FILES={'agent.py','music_tool.py','rules.json','requirements.txt','Start.command','Install.command',
-            '.gitignore','README.md','AGENTS.md','CLAUDE.md','README.txt','VALIDATION.txt','LICENSE'}
+ROOT_FILES={'agent.py','music_tool.py','rules.json','requirements.txt','requirements-spotify.txt','Start.command','Install.command',
+            '.gitignore','README.md','AGENTS.md','CLAUDE.md','README.txt','VALIDATION.txt','LICENSE','LICENSE-MIT','NOTICE'}
 SOURCE_DIRS={'engine','scripts','tests','docs','.github'}
-PRIVATE_PARTS={'data','.venv','.git','__pycache__','dist','exports','work','private','.pytest_cache'}
+PRIVATE_PARTS={'data','.venv','.venv-spotify','.spotify-session','.git','__pycache__','dist','exports','work','private','.pytest_cache'}
 
 def validate_path(name):
     path=Path(name)
     if path.is_absolute() or '..' in path.parts or any(p.casefold() in PRIVATE_PARTS for p in path.parts):
         raise ValueError('Private or unsafe archive path: '+str(name))
+    if any(word in path.name.lower() for word in ('cookies','storage-state','session')) and path.suffix.lower() in {'.json','.db','.sqlite','.txt'}:
+        raise ValueError('Session material cannot be published: '+str(name))
+    if path.name in {'spotify_library.json','yandex_library.json'}:
+        raise ValueError('Personal export cannot be published: '+str(name))
     if path.suffix.lower() in {'.log','.zip','.pyc','.pem','.key'} or path.name.startswith('.env'):
         raise ValueError('Private or generated file: '+str(name))
     if path.name in {'auth-request.json','library.json','catalog-progress.json','sorting-result.json','runner.lock'} or path.suffix=='.lock':
         raise ValueError('Runtime file cannot be published: '+str(name))
 
 def validate_content(name,content):
+    if Path(name).suffix.lower()=='.json':
+        def inspect(value):
+            if isinstance(value,dict):
+                for key,item in value.items():
+                    if key.casefold() in {'cookies','password','access_token','accesstoken','refresh_token','sp_dc','sp_key','authorization'}:
+                        raise ValueError('Credential-shaped JSON cannot be published: '+str(name))
+                    inspect(item)
+            elif isinstance(value,list):
+                for item in value:inspect(item)
+        try:inspect(json.loads(content))
+        except json.JSONDecodeError:pass
     patterns=[r'/Users/[A-Za-z0-9._-]+/',r'\bgh[pousr]_[A-Za-z0-9]{20,}\b',
               r'\bgithub_pat_[A-Za-z0-9_]{20,}\b',r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
               r'(?i)\bBearer\s+[A-Za-z0-9._-]{24,}']
