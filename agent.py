@@ -141,6 +141,18 @@ def main(argv=None):
     q.add_argument('--playlist',default='ЯM')
     q.add_argument('--limit',type=int,default=0)
     q.add_argument('--apply',action='store_true')
+    q=sub.add_parser('setup-spotify',help='Отдельное необязательное окружение Spotify')
+    q.add_argument('--check',action='store_true')
+    q.add_argument('--python')
+    q=sub.add_parser('export-spotify',help='Экспериментальный Spotify: выборка из 5, полный экспорт с --full')
+    q.add_argument('--full',action='store_true')
+    q=sub.add_parser('transfer-spotify',help='Предпросмотр Spotify; запись только с --apply')
+    q.add_argument('--export',type=Path,required=True)
+    q.add_argument('--playlist',default='Spotify')
+    q.add_argument('--limit',type=int,default=0)
+    q.add_argument('--apply',action='store_true')
+    q=sub.add_parser('status-spotify')
+    q.add_argument('--export',type=Path,required=True)
     sub.add_parser('audit')
     q=sub.add_parser('plan')
     q.add_argument('--source',action='append',default=[])
@@ -151,6 +163,21 @@ def main(argv=None):
     sub.add_parser('status',help='Состояние, прогресс и запрос входа в JSON')
     args=parser.parse_args(argv)
     data=args.data_dir.expanduser().resolve()
+    if args.command=='setup-spotify':
+        from engine.spotify_commands import setup as spotify_setup
+        return spotify_setup(args.check,args.python)
+    if args.command=='export-spotify':
+        from engine.spotify_commands import export as spotify_export
+        return spotify_export(data,args.full)
+    if args.command in ('transfer-spotify','status-spotify'):
+        from engine.sources import source_name, transfer_directory
+        path=args.export.expanduser().resolve()
+        source=read(path)
+        if not source or source_name(source)!='spotify':raise ValueError('Нужен spotify_library.json')
+        if args.command=='status-spotify':emit(status(transfer_directory(data,source)));return 0
+        forwarded=['transfer',path,'--playlist',args.playlist,'--limit',args.limit]
+        if args.apply:forwarded.append('--apply')
+        return call_tool(data,forwarded)
     if args.command=='setup':return setup(args.check)
     if args.command=='doctor':emit(diagnostics(data,args.music));return 0
     if args.command=='status':emit(status(data));return 0

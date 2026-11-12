@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run the transfer with a heartbeat, bounded recovery, and readable status."""
 import collections
+import argparse
 import datetime
 import json
 import os
@@ -9,6 +10,10 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+try:
+    from .music_lock import music_operation_lock
+except ImportError:
+    from music_lock import music_operation_lock
 
 CODE_DIR=Path(__file__).resolve().parent
 HERE=Path(os.environ.get('MUSIC_TOOL_STATE_DIR', str(CODE_DIR.parent/'data/transfer')))
@@ -74,8 +79,23 @@ def completed_count():
                for x in progress.get('tracks',{}).values())
 
 
+def batch_arguments(arguments, completed):
+    parser=argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--limit',type=int,default=0)
+    options,rest=parser.parse_known_args(arguments)
+    if options.limit and completed>=options.limit:
+        return None
+    remaining=max(0,options.limit-completed) if options.limit else 0
+    return rest+['--limit',str(remaining)]
+
+
 def main():
-    # Advisory lock prevents a second runner from writing to the same playlist.
+    with music_operation_lock() as music_lock_fd:
+        return run_locked(music_lock_fd)
+
+
+def run_locked(music_lock_fd):
+    # Retain the state lock for compatibility with older runners.
     import fcntl
     HERE.mkdir(parents=True,exist_ok=True)
     lock=open(HERE/'runner.lock','w')
@@ -86,15 +106,21 @@ def main():
     child=None
     attempt=0
     failures=0
+    batch_start=completed_count()
     try:
         while failures<3:
             attempt+=1
             completed_before=completed_count()
+            arguments=batch_arguments(sys.argv[1:],completed_before-batch_start)
+            if arguments is None:
+                publish('Завершено — достигнут лимит тестовой порции',None,attempt)
+                return
             (HERE/'current-step.json').write_text(json.dumps({'step':'Запуск обработки','since':time.time()},ensure_ascii=False))
             with open(HERE/'transfer.log','a',buffering=1) as log:
                 log.write(f'\nRUN {attempt}: {datetime.datetime.now().isoformat()}\n')
-                child=subprocess.Popen([sys.executable,'-u',str(CODE_DIR/'catalog_transfer.py'),*sys.argv[1:]],
-                                       stdout=log,stderr=log,start_new_session=True)
+                child=subprocess.Popen([sys.executable,'-u',str(CODE_DIR/'catalog_transfer.py'),*arguments],
+                                       stdout=log,stderr=log,start_new_session=True,
+                                       pass_fds=(music_lock_fd,))
                 while child.poll() is None:
                     status=publish('Работает',child.pid,attempt)
                     if status['step_seconds']>120:
@@ -119,7 +145,11 @@ def main():
     finally:
         if child is not None and child.poll() is None:
             stop(child)
+        lock.close()
 
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))

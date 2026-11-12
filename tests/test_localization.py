@@ -66,3 +66,12 @@ class AppleScriptMenuTests(unittest.TestCase):
         self.assertEqual(self.resolve('add-to-library',[]).stdout.strip(),'0')
 
 if __name__=='__main__':unittest.main()
+
+
+class BatchLimitTests(unittest.TestCase):
+    def test_restarts_do_not_reset_batch_budget(self):
+        from run_transfer import batch_arguments
+        self.assertEqual(batch_arguments(['input.json','--limit','5'],2), ['input.json','--limit','3'])
+        self.assertIsNone(batch_arguments(['input.json','--limit','5'],5))
+        self.assertIsNone(batch_arguments(['input.json','--limit=5'],6))
+        self.assertEqual(batch_arguments(['input.json'],100),['input.json','--limit','0'])

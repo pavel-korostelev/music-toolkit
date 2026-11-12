@@ -9,3 +9,9 @@ dist/
 *.zip
 .pytest_cache/
 /POST.txt
+
+.venv-spotify/
+.spotify-session/
+*session*.json
+*cookies*.json
+*storage-state*.json
