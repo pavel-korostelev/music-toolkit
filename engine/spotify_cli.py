@@ -26,7 +26,8 @@ def main():
             cookies.clear()
         path, result = Exporter(backend, args.output, sample=0 if args.full else 5).run()
         print(json.dumps({'path': str(path), 'mode': result['mode'], 'complete': result['complete'],
-                          'errors': len(result['errors']), 'playlists': len(result['playlists'])}, ensure_ascii=False), flush=True)
+                          'errors': len(result['errors']), 'truncations': len(result['truncations']),
+                          'playlists': len(result['playlists'])}, ensure_ascii=False), flush=True)
         # A successful sample is still NOT a complete library export.
         return 0 if result['complete'] else 2
     except KeyboardInterrupt:

@@ -78,7 +78,8 @@ def transfer_directory(data_dir, export):
 def require_complete_spotify(export):
     """An export success flag alone is insufficient for account mutations."""
     if (export.get('complete') is not True or export.get('mode') != 'full' or
-            export.get('errors') or not export.get('library_pages') or not export.get('playlists')):
+            export.get('errors') or export.get('truncations') or
+            not export.get('library_pages') or not export.get('playlists')):
         raise ValueError('Spotify: нужен полный проверенный экспорт; частичный доступен только для предпросмотра.')
     for page in export['library_pages']:
         if page.get('complete') is not True or not isinstance(page.get('expected'), int) or page['expected'] != page.get('received'):

@@ -140,7 +140,7 @@ class Exporter:
                      'mode': 'sample' if sample else 'full', 'complete': False,
                      'scope': 'liked_tracks_and_library_playlists_including_folders',
                      'playlists': [], 'folders': [], 'skipped_library_items': [],
-                     'library_pages': [], 'errors': []}
+                     'library_pages': [], 'errors': [], 'truncations': []}
 
     def checkpoint(self):
         save_json(self.path, self.data)
@@ -149,6 +149,12 @@ class Exporter:
         self.data['errors'].append({'stage': stage, 'code': code,
                                     'collection': self.data['playlists'][-1]['source_id'] if stage == 'collection' and self.data['playlists'] else None})
         self.checkpoint()
+
+    def truncated(self, stage, code, source_id=None):
+        entry = {'stage': stage, 'code': code, 'source_id': source_id}
+        if entry not in self.data['truncations']:
+            self.data['truncations'].append(entry)
+            self.checkpoint()
 
     def collection(self, uri, title, fetch, folders):
         entry = {'source_id': uri, 'title': title, 'folder_path': folders,
@@ -171,6 +177,8 @@ class Exporter:
         try:
             counts = paginate(fetch, consume, self.sample)
             entry['complete'] = counts['complete']
+            if self.sample and not counts['complete']:
+                self.truncated('collection', 'sample_track_limit', uri)
         except ExportError as exc:
             self.error('collection', str(exc))
             if str(exc) in FATAL_CODES:
@@ -196,7 +204,10 @@ class Exporter:
                     self.error('folders', 'folder_cycle_or_duplicate')
                     continue
                 if len(visited) >= (5 if self.sample else 10000):
-                    self.error('folders', 'folder_limit')
+                    if self.sample:
+                        self.truncated('folders', 'sample_folder_limit')
+                    else:
+                        self.error('folders', 'folder_limit')
                     break
                 visited.add(folder)
                 listing = {'folder_uri': folder, 'received': 0, 'complete': False}
@@ -220,7 +231,7 @@ class Exporter:
                                 seen_playlists[uri]['folder_paths'].append(parents)
                                 continue
                             if self.sample and len(seen_playlists) >= self.sample:
-                                self.error('library', 'sample_playlist_limit')
+                                self.truncated('library', 'sample_playlist_limit')
                                 continue
                             self.collection(uri, name, lambda o, n, u=uri: self.backend.playlist(u, o, n), parents)
                             seen_playlists[uri] = self.data['playlists'][-1]
@@ -232,7 +243,10 @@ class Exporter:
                             self.error('library', 'unknown_library_item')
                     self.checkpoint()
                 try:
-                    listing.update(paginate(lambda o, n: self.backend.library(folder, o, n), consume, self.sample))
+                    counts = paginate(lambda o, n: self.backend.library(folder, o, n), consume, self.sample)
+                    listing.update(counts)
+                    if self.sample and not counts['complete']:
+                        self.truncated('library', 'sample_library_page_limit', folder)
                 except ExportError as exc:
                     self.error('library', str(exc))
                     if str(exc) in FATAL_CODES:

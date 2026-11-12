@@ -7,8 +7,11 @@ Only verified matches already present in the library are copied.
 import argparse
 try:
     from .sources import records
+    from .music_lock import music_operation_lock
 except ImportError:
     from sources import records
+    from music_lock import music_operation_lock
+from contextlib import nullcontext
 import json
 import re
 import subprocess
@@ -100,6 +103,11 @@ def main():
     parser.add_argument('--apply', action='store_true', help='Copy matches; default only writes a report')
     parser.add_argument('--report', type=Path, default=Path(__file__).with_name('progress.json'))
     args = parser.parse_args()
+    with music_operation_lock() if args.apply else nullcontext():
+        return transfer(args)
+
+
+def transfer(args):
     export = json.loads(args.export.read_text())
     # First occurrence preserves the source order.
     unique = records(export)

@@ -10,6 +10,10 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+try:
+    from .music_lock import music_operation_lock
+except ImportError:
+    from music_lock import music_operation_lock
 
 CODE_DIR=Path(__file__).resolve().parent
 HERE=Path(os.environ.get('MUSIC_TOOL_STATE_DIR', str(CODE_DIR.parent/'data/transfer')))
@@ -86,7 +90,12 @@ def batch_arguments(arguments, completed):
 
 
 def main():
-    # Advisory lock prevents a second runner from writing to the same playlist.
+    with music_operation_lock() as music_lock_fd:
+        return run_locked(music_lock_fd)
+
+
+def run_locked(music_lock_fd):
+    # Retain the state lock for compatibility with older runners.
     import fcntl
     HERE.mkdir(parents=True,exist_ok=True)
     lock=open(HERE/'runner.lock','w')
@@ -110,7 +119,8 @@ def main():
             with open(HERE/'transfer.log','a',buffering=1) as log:
                 log.write(f'\nRUN {attempt}: {datetime.datetime.now().isoformat()}\n')
                 child=subprocess.Popen([sys.executable,'-u',str(CODE_DIR/'catalog_transfer.py'),*arguments],
-                                       stdout=log,stderr=log,start_new_session=True)
+                                       stdout=log,stderr=log,start_new_session=True,
+                                       pass_fds=(music_lock_fd,))
                 while child.poll() is None:
                     status=publish('Работает',child.pid,attempt)
                     if status['step_seconds']>120:
@@ -135,7 +145,11 @@ def main():
     finally:
         if child is not None and child.poll() is None:
             stop(child)
+        lock.close()
 
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc))

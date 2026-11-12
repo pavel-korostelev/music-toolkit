@@ -89,7 +89,9 @@ Do not change the AppleScript matcher or weaken duration/version checks.
 Default destination is Spotify. Preserve --data-dir, export and --playlist.
 Status: status-spotify --export ... . State lives under data/spotify/<account hash>,
 with namespaced Spotify IDs; do not invent yandex_id values or migrate old state.
-Do not run Spotify and Yandex imports or sorting concurrently. Report source rows,
+Do not run Spotify and Yandex imports or sorting concurrently. A user-wide Music
+lock also enforces this across accounts, data directories and checkouts; do not
+delete its file while a job is running. Report source rows,
 unique verified Apple IDs, actual destination size, review and skips separately.
 
 The combined project in this branch is GPL-3.0-only (LICENSE), as authorized
@@ -98,6 +100,11 @@ notices. A separate process/venv is not a GPL exemption. Keep the pinned upstrea
 source reference when distributing the integration. Do not change licensing
 silently in subsequent work.
 Never commit/upload exports, sessions, environments, logs or listener data.
+
+Sample limits are recorded in truncations, not errors. With mode=sample,
+complete=false and exit code 2 remain expected. Inspect errors and truncations
+separately: expected sample truncations alone do not prevent a subsequent full
+export. Real errors still require review. Never apply an export with truncations.
 
 Run the full local suite on Python 3.9 without optional dependencies, and in the
 Spotify environment. Test the built and unpacked source archive. Record account

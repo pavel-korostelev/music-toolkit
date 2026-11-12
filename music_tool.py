@@ -2,6 +2,7 @@
 """MusicToolkit: export Yandex metadata, transfer and organize macOS Music."""
 import argparse
 from engine.sources import identity as source_identity, source_name, transfer_directory, require_complete_spotify
+from engine.music_lock import music_operation_lock
 import datetime as dt
 import hashlib
 import importlib.util
@@ -410,9 +411,9 @@ def main(argv=None):
     elif args.command=='apply':
         plan=load(args.plan or data_dir/'sorting-plan.json')
         result_path=data_dir/'sorting-result.json'
-        # The lock is shared across data directories for this copy of the tool.
+        # Share the Music lock with transfers, including other checkouts/accounts.
         import fcntl
-        with open(ROOT/'.apply.lock','w') as lock:
+        with music_operation_lock(), open(ROOT/'.apply.lock','w') as lock:
             try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError:raise RuntimeError('Применение плана уже запущено.')
             before=audit()

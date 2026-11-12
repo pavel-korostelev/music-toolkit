@@ -75,6 +75,47 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(len(data['playlists'][0]['tracks']), 5)
         self.assertEqual(data['mode'], 'sample')
 
+    def test_sample_nested_playlist_budget_is_truncation_not_error(self):
+        backend = FakeBackend()
+        roots = backend.roots[:4] + [backend.roots[-1]]
+        nested = [{'item': {'data': {'uri': 'spotify:playlist:N'+str(i), 'name': 'Nested'}}} for i in range(5)]
+        backend.library = lambda f,o,n: page(roots if f is None else nested,o,n)
+        _, _, data = self.run_export(backend, sample=5)
+        self.assertEqual(data['errors'], [])
+        self.assertIn('sample_playlist_limit', {t['code'] for t in data['truncations']})
+        self.assertEqual(len(data['playlists']), 6)  # likes plus five playlists
+        self.assertFalse(data['complete'])
+        from engine.sources import require_complete_spotify
+        with self.assertRaises(ValueError): require_complete_spotify(data)
+        # A full run of exactly the same library must not inherit sample limits.
+        _, _, full = self.run_export(backend, sample=0)
+        self.assertEqual(full['errors'], [])
+        self.assertEqual(full['truncations'], [])
+        self.assertEqual(len(full['playlists']), 10)
+        require_complete_spotify(full)
+
+    def test_sample_folder_and_page_limits_are_separate_from_errors(self):
+        backend = FakeBackend()
+        folders = [{'item': {'data': {'uri': 'spotify:user:test:folder:'+str(i), 'name': 'Folder'}}} for i in range(5)]
+        backend.library = lambda f,o,n: page(folders if f is None else [],o,n)
+        _, _, data = self.run_export(backend, sample=5)
+        self.assertEqual(data['errors'], [])
+        self.assertIn('sample_folder_limit', {t['code'] for t in data['truncations']})
+        self.assertLessEqual(len(data['library_pages']), 5)
+        _, _, data = self.run_export(sample=5)
+        self.assertEqual(data['errors'], [])
+        codes = {t['code'] for t in data['truncations']}
+        self.assertIn('sample_library_page_limit', codes)
+        self.assertIn('sample_track_limit', codes)
+
+    def test_sample_still_reports_schema_errors_and_folder_cycles(self):
+        for item in ({'unknownShape': True}, {'item': {'data': {'uri': 'spotify:user:test:folder:cycle', 'name': 'Folder'}}}):
+            backend = FakeBackend()
+            backend.library = lambda f,o,n: page([item],o,n)
+            _, _, data = self.run_export(backend, sample=5)
+            self.assertTrue(data['errors'])
+            self.assertFalse(data['complete'])
+
     def test_partial_saved_without_exception_text_or_extra_fields(self):
         backend = FakeBackend()
         original = backend.likes
@@ -215,6 +256,15 @@ class CompletenessTests(unittest.TestCase):
         data['playlists'][0]['tracks'].pop()
         with self.assertRaises(ValueError): require_complete_spotify(data)
         with self.assertRaises(ValueError): require_complete_spotify({'complete': True, 'mode': 'full'})
+
+    def test_full_export_with_truncations_cannot_be_applied(self):
+        from engine.sources import require_complete_spotify
+        with tempfile.TemporaryDirectory() as tmp, patch('builtins.print'):
+            _, data = Exporter(FakeBackend(), tmp, 0).run()
+        data.pop('truncations')
+        require_complete_spotify(data)  # Old schema-2 exports remain valid.
+        data['truncations'] = [{'stage': 'library', 'code': 'sample_playlist_limit'}]
+        with self.assertRaises(ValueError): require_complete_spotify(data)
 
 
 class ObservedResponseTests(unittest.TestCase):
